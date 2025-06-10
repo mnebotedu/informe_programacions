@@ -33,7 +33,10 @@
             </ul>
         </li>
     </ul>
-    <a href="{{ url_for('static', filename='informe.docx') }}" download style="background-color:#2196F3; color:white; padding:10px 20px; border:none; border-radius:5px; text-decoration:none;">Descarregar informe</a>
-
+      <!-- Modificat per apuntar al fitxer generat amb UUID -->
+    <a href="/{{ doc }}" download style="background-color:#2196F3; color:white; padding:10px 20px; border:none; border-radius:5px; text-decoration:none;">
+        Descarregar informe generat en DOCX
+    </a>
+  
 </body>
 </html>
