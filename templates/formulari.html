@@ -1,3 +1,5 @@
+{% extends "layout.html" %}
+{% block content %}
 
 <!DOCTYPE html>
 <html lang="ca">
@@ -6,7 +8,26 @@
     <title>Formulari dinàmic</title>
     <script>
         let estructura = JSON.parse(`{{ estructura_json | safe }}`);
-        let sabers = JSON.parse(`{{ sabers_json | safe }}`);
+        let sabersJson = JSON.parse(`{{ sabers_json | safe }}`);
+        const concrecionsMap = {};  // Saber => [concrecions]
+
+        function actualitzaMateries() {
+            const curs = document.getElementById("curs").value;
+            const materiaSelect = document.getElementById("materia");
+            materiaSelect.innerHTML = "";
+
+            if (estructura[curs]) {
+                const materies = Object.keys(estructura[curs]);
+                materies.forEach(materia => {
+                    const opt = document.createElement("option");
+                    opt.value = materia;
+                    opt.textContent = materia;
+                    materiaSelect.appendChild(opt);
+                });
+
+                actualitzaFormulari(); // recarrega dades
+            }
+        }
 
         function actualitzaFormulari() {
             const curs = document.getElementById("curs").value;
@@ -14,38 +35,31 @@
             const ceDiv = document.getElementById("competencies");
             const criterisDiv = document.getElementById("criteris");
             const sabersDiv = document.getElementById("sabers");
+            const concrecionsUl = document.getElementById("concrecions");
 
             ceDiv.innerHTML = "";
             criterisDiv.innerHTML = "";
             sabersDiv.innerHTML = "";
+            concrecionsUl.innerHTML = "";
+            Object.keys(concrecionsMap).forEach(k => delete concrecionsMap[k]);
 
             if (estructura[curs] && estructura[curs][materia]) {
                 const ce_dict = estructura[curs][materia];
 
-                // Botó per seleccionar totes les CE
-                let btnSelectAll = document.createElement("button");
-                btnSelectAll.type = "button";
-                btnSelectAll.textContent = "Seleccionar totes";
-                btnSelectAll.onclick = function () {
-                    document.querySelectorAll('input[name="competencies"]').forEach(cb => cb.checked = true);
-                };
-                ceDiv.appendChild(btnSelectAll);
-                ceDiv.appendChild(document.createElement("br"));
-                ceDiv.appendChild(document.createElement("br"));
-
+                let ul = document.createElement("ul");
                 for (let ce in ce_dict) {
-                    let checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.name = "competencies";
-                    checkbox.value = ce;
+                    let li = document.createElement("li");
+                    li.textContent = ce;
 
-                    let span = document.createElement("span");
-                    span.textContent = " " + ce;
+                    let hiddenInput = document.createElement("input");
+                    hiddenInput.type = "hidden";
+                    hiddenInput.name = "competencies";
+                    hiddenInput.value = ce;
 
-                    ceDiv.appendChild(checkbox);
-                    ceDiv.appendChild(span);
-                    ceDiv.appendChild(document.createElement("br"));
+                    li.appendChild(hiddenInput);
+                    ul.appendChild(li);
                 }
+                ceDiv.appendChild(ul);
 
                 for (let ce in ce_dict) {
                     let label = document.createElement("strong");
@@ -71,60 +85,64 @@
                 }
             }
 
-            if (sabers[curs] && sabers[curs][materia]) {
-                sabers[curs][materia].forEach(saber => {
-                    let checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.name = "sabers";
-                    checkbox.value = saber;
+            if (curs && materia) {
+                fetch(`/get_sabers?curs=${encodeURIComponent(curs)}&materia=${encodeURIComponent(materia)}`)
+                    .then(response => response.json())
+                    .then(sabers => {
+                        sabers.forEach(saber => {
+                            let checkbox = document.createElement("input");
+                            checkbox.type = "checkbox";
+                            checkbox.name = "sabers";
+                            checkbox.value = saber;
 
-                    let span = document.createElement("span");
-                    span.textContent = " " + saber;
+                            let span = document.createElement("span");
+                            span.textContent = " " + saber;
 
-                    sabersDiv.appendChild(checkbox);
-                    sabersDiv.appendChild(span);
-                    sabersDiv.appendChild(document.createElement("br"));
-                });
+                            sabersDiv.appendChild(checkbox);
+                            sabersDiv.appendChild(span);
+                            sabersDiv.appendChild(document.createElement("br"));
+                        });
+                    });
             }
         }
+
+        window.onload = function () {
+            actualitzaMateries(); // inicia amb el primer curs seleccionat
+        };
     </script>
 </head>
-<body onload="actualitzaFormulari()">
-    <h2>Formulari per a {{ nivell }}</h2>
+<body>
+    <h2>Formulari</h2>
     <form method="post">
         <input type="hidden" name="nivell" value="{{ nivell }}">
 
         <label for="curs">Curs:</label>
-        <select name="curs" id="curs" onchange="actualitzaFormulari()">
+        <select id="curs" name="curs" onchange="actualitzaMateries()">
             {% for curs in cursos %}
                 <option value="{{ curs }}">{{ curs }}</option>
             {% endfor %}
-        </select><br><br>
+        </select>
 
         <label for="materia">Matèria:</label>
-        <select name="materia" id="materia" onchange="actualitzaFormulari()">
-            {% set materia_list = estructura[cursos[0]].keys() | list %}
-            {% for materia in materia_list %}
-                <option value="{{ materia }}">{{ materia }}</option>
-            {% endfor %}
-        </select><br><br>
+        <select id="materia" name="materia" onchange="actualitzaFormulari()">
+            <!-- S'omplirà dinàmicament amb JS -->
+        </select>
 
-        <label><strong>Competències específiques:</strong></label><br>
-        <hr>
-        <div id="competencies"></div><br>
+        <h3>Competències específiques</h3>
+        <div id="competencies"></div>
 
-        <label><strong>Criteris d’avaluació:</strong></label><br>
-        <hr>
-        <button type="button" onclick="document.querySelectorAll('input[name=\'criteris\']').forEach(cb => cb.checked = true);">
-Seleccionar tots</button><br><br><div id="criteris"></div><br>
+        <h3>Criteris d'avaluació</h3>
+        <div id="criteris"></div>
 
-        <label><strong>Sabers bàsics:</strong></label><br>
-        <hr>
-        <button type="button" onclick="document.querySelectorAll('input[name=\'sabers\']').forEach(cb => cb.checked = true);">
-Seleccionar tots</button><br><br><div id="sabers"></div><br>
+        <h3>Sabers relacionats</h3>
+        <div id="sabers"></div>
 
-        <button type="submit" style="background-color:#4CAF50; color:white; padding:10px 20px; border:none; border-radius:5px;">
-Generar informe</button>
+        <!--<h3>Concrecions (opcional)</h3>-->
+        <ul id="concrecions"></ul>
+
+        <button type="submit">Generar informe</button>
     </form>
 </body>
 </html>
+
+{% endblock %}

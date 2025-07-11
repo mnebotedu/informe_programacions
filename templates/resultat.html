@@ -1,3 +1,5 @@
+{% extends "layout.html" %}
+{% block content %}
 
 <!DOCTYPE html>
 <html lang="ca">
@@ -32,6 +34,16 @@
             {% endfor %}
             </ul>
         </li>
+        {% if dades.concrecions %}
+<!--<li><strong>Concrecions dels sabers seleccionats:</strong>-->
+    <ul>
+    {% for c in dades.concrecions %}
+        <li>{{ c }}</li>
+    {% endfor %}
+    </ul>
+</li>
+{% endif %}
+
     </ul>
       <!-- Modificat per apuntar al fitxer generat amb UUID -->
     <a href="/{{ doc }}" download style="background-color:#2196F3; color:white; padding:10px 20px; border:none; border-radius:5px; text-decoration:none;">
@@ -40,3 +52,5 @@
   
 </body>
 </html>
+
+{% endblock %}
